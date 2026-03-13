@@ -123,13 +123,33 @@ export function useTrysteroRoom(roomId) {
   const initSession = useCallback(() => {
     setState((prev) => {
       if (prev.session) return prev
-      const session = createInitialSession(roomId)
+      const session = createInitialSession(roomId, 'Planning session', myId)
       const players = [createPlayer(myId)]
       const next = { session, players: [...players], votes: prev.votes ?? {} }
       sendStateRef.current?.(next)
       return next
     })
   }, [roomId, myId])
+
+  const kickPlayer = useCallback(
+    (playerId) => {
+      setState((prev) => {
+        const session = prev.session
+        if (!session || session.adminId !== myId) return prev
+        const kicked = [...(session.kickedPlayerIds ?? []), playerId]
+        const next = { ...prev, session: { ...session, kickedPlayerIds: kicked } }
+        broadcastState(next)
+        return next
+      })
+    },
+    [myId, broadcastState]
+  )
+
+  const leaveRoom = useCallback(() => {
+    roomRef.current?.leave()
+    roomRef.current = null
+    sendStateRef.current = null
+  }, [])
 
   const addStory = useCallback(
     (title = '', link = '') => {
@@ -164,12 +184,16 @@ export function useTrysteroRoom(roomId) {
   )
 
   const currentStoryId = state.session?.currentStoryId
+  const kickedIds = state.session?.kickedPlayerIds ?? []
+  const playersFiltered = (state.players ?? []).filter((p) => !kickedIds.includes(p.id))
   const playersForSidebar = getVotedForStory(
-    state.players ?? [],
+    playersFiltered,
     state.votes ?? {},
     currentStoryId
   )
   const waitingCount = playersForSidebar.filter((p) => !p.voted).length
+  const isAdmin = state.session?.adminId === myId
+  const kickedOut = kickedIds.includes(myId)
 
   return {
     state,
@@ -178,6 +202,8 @@ export function useTrysteroRoom(roomId) {
     players: playersForSidebar,
     votes: state.votes ?? {},
     waitingCount,
+    isAdmin,
+    kickedOut,
     updateSession,
     setVote,
     revealVotes,
@@ -185,6 +211,8 @@ export function useTrysteroRoom(roomId) {
     initSession,
     addStory,
     setStoryStatus,
+    kickPlayer,
+    leaveRoom,
     broadcastState,
   }
 }

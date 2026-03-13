@@ -7,6 +7,9 @@ export default function Sidebar({
   sessionStartedAt,
   onInviteClick,
   inviteUrl,
+  isAdmin = false,
+  myPlayerId,
+  onKick,
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -45,6 +48,17 @@ export default function Sidebar({
             <span className="sidebar-player-time">
               {p.lastVoteAt ? formatElapsed(Date.now() - p.lastVoteAt) : '00:00:00'}
             </span>
+            {isAdmin && p.id !== myPlayerId && onKick && (
+              <button
+                type="button"
+                className="sidebar-player-kick"
+                onClick={() => onKick(p.id)}
+                title={`Remove ${p.name}`}
+                aria-label={`Remove ${p.name}`}
+              >
+                Kick
+              </button>
+            )}
           </li>
         ))}
       </ul>

@@ -22,6 +22,8 @@ export default function Room({
   onCopyInvite,
   inviteUrl,
   onNameClick,
+  isAdmin,
+  onKick,
 }) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
@@ -123,6 +125,9 @@ export default function Room({
             sessionStartedAt={sessionStartedAt}
             onInviteClick={onCopyInvite}
             inviteUrl={inviteUrl}
+            isAdmin={isAdmin}
+            myPlayerId={myPlayerId}
+            onKick={onKick}
           />
         </div>
       </div>

@@ -85,6 +85,21 @@
   color: var(--text);
 }
 
+.sidebar-player-kick {
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  background: transparent;
+  color: var(--waiting);
+  border: 1px solid var(--waiting);
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.sidebar-player-kick:hover {
+  background: var(--waiting);
+  color: white;
+}
+
 .sidebar-invite {
   padding-top: 16px;
   border-top: 1px solid var(--border);

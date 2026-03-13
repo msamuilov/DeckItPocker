@@ -1,0 +1,75 @@
+.name-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.name-dialog {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.name-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  color: var(--text-h);
+}
+
+.name-dialog-hint {
+  margin: 0 0 20px;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.name-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.name-dialog-input {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 1rem;
+}
+
+.name-dialog-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.name-dialog-input::placeholder {
+  color: var(--text);
+}
+
+.name-dialog-submit {
+  padding: 12px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.name-dialog-submit:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.name-dialog-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
