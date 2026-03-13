@@ -8,8 +8,8 @@ Planning poker for teams — no database, runs directly from GitHub.
 ## Run locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/DeckItPoccker.git
-cd DeckItPoccker
+git clone https://github.com/YOUR_USERNAME/DeckItPocker.git
+cd DeckItPocker
 npm install
 npm run dev
 ```
@@ -22,7 +22,7 @@ Open [http://localhost:5173](http://localhost:5173). Create a session to get a r
 2. In the repo: **Settings → Pages → Source**: choose **GitHub Actions**.
 3. On each push to `main`, the workflow builds the app and publishes to Pages.
 
-Live app: `https://YOUR_USERNAME.github.io/DeckItPoccker/`
+Live app: `https://YOUR_USERNAME.github.io/DeckItPocker/`
 
 ## How it works
 
