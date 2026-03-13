@@ -1,0 +1,69 @@
+.room-header {
+  margin-bottom: 24px;
+}
+
+.room-title {
+  font-size: 1.5rem;
+  color: var(--text-h);
+  margin: 0 0 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.room-title:hover {
+  text-decoration: underline;
+}
+
+.room-title-input {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 8px;
+}
+
+.room-title-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.room-story-link {
+  font-size: 0.875rem;
+  word-break: break-all;
+}
+
+.room-actions {
+  margin-top: 16px;
+}
+
+.room-reveal-btn,
+.room-new-round-btn {
+  padding: 10px 20px;
+  border: none;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.room-reveal-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.room-reveal-btn:hover {
+  filter: brightness(1.1);
+}
+
+.room-new-round-btn {
+  background: var(--card-bg);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+}
+
+.room-new-round-btn:hover {
+  background: var(--border);
+}
