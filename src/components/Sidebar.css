@@ -19,6 +19,12 @@
   background: var(--success);
 }
 
+.sidebar-status-idle {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
 .sidebar-meta {
   display: flex;
   justify-content: space-between;
@@ -98,6 +104,45 @@
 .sidebar-player-kick:hover {
   background: var(--waiting);
   color: white;
+}
+
+.sidebar-revealed-votes {
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-revealed-votes-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0 0 12px;
+}
+
+.sidebar-revealed-votes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-revealed-votes-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 1.25rem;
+}
+
+.sidebar-revealed-votes-name {
+  color: var(--text);
+}
+
+.sidebar-revealed-votes-value {
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 1.375rem;
 }
 
 .sidebar-invite {

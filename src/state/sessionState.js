@@ -13,12 +13,15 @@ export function createInitialSession(roomId, title = 'Planning session', adminId
     revealVotes: false,
     adminId,
     kickedPlayerIds: [],
+    voteDeadline: null,
   }
 }
 
-export function createPlayer(id, name = `Guest-${id.slice(0, 6)}`) {
+export function createPlayer(id, name = `Guest-${id.slice(0, 6)}`, persistentId = null) {
+  const pid = persistentId || id
   return {
     id,
+    persistentId: pid,
     name,
     voted: false,
     lastVoteAt: null,
@@ -55,10 +58,15 @@ export function mergeState(local, incoming, myPlayerId) {
   }
 
   const playersMap = new Map()
-  ;(local?.players ?? []).forEach((p) => playersMap.set(p.id, { ...p }))
+  const playerKey = (p) => p.persistentId || p.id
+  ;(local?.players ?? []).forEach((p) => {
+    const key = playerKey(p)
+    playersMap.set(key, { ...p, persistentId: p.persistentId || p.id })
+  })
   ;(incoming?.players ?? []).forEach((p) => {
-    const existing = playersMap.get(p.id)
-    playersMap.set(p.id, existing ? { ...existing, ...p } : { ...p })
+    const key = playerKey(p)
+    const existing = playersMap.get(key)
+    playersMap.set(key, existing ? { ...existing, ...p, persistentId: p.persistentId || p.id } : { ...p, persistentId: p.persistentId || p.id })
   })
   const players = Array.from(playersMap.values())
 
@@ -73,10 +81,14 @@ export function mergeState(local, incoming, myPlayerId) {
 
 export function getVotedForStory(players, votes, storyId) {
   const storyVotes = votes?.[storyId] ?? {}
-  return players.map((p) => ({
-    ...p,
-    voted: p.id in storyVotes,
-    lastVoteAt: p.id in storyVotes ? Date.now() : p.lastVoteAt,
-    currentVote: storyVotes[p.id] ?? null,
-  }))
+  const voteKey = (p) => p.persistentId || p.id
+  return players.map((p) => {
+    const key = voteKey(p)
+    return {
+      ...p,
+      voted: key in storyVotes,
+      lastVoteAt: key in storyVotes ? Date.now() : p.lastVoteAt,
+      currentVote: storyVotes[key] ?? null,
+    }
+  })
 }

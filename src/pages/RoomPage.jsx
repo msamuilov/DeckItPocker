@@ -45,6 +45,8 @@ export default function RoomPage({ theme, onThemeToggle }) {
     setStoryStatus,
     kickPlayer,
     leaveRoom,
+    setVoteDeadline,
+    voteDeadline,
   } = useTrysteroRoom(roomId || '')
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function RoomPage({ theme, onThemeToggle }) {
     [nameDraft]
   )
 
-  const displayName = userName || players.find((p) => p.id === myPlayerId)?.name || `Guest-${myPlayerId?.slice(0, 6) || ''}`
+  const displayName = userName || players.find((p) => (p.persistentId || p.id) === myPlayerId)?.name || `Guest-${myPlayerId?.slice(0, 8) || ''}`
   const inviteUrl = roomId ? window.location.origin + window.location.pathname + '#/room/' + roomId : ''
 
   if (showNameDialog) {
@@ -148,6 +150,8 @@ export default function RoomPage({ theme, onThemeToggle }) {
       onNameClick={handleNameClick}
       isAdmin={isAdmin}
       onKick={kickPlayer}
+      setVoteDeadline={setVoteDeadline}
+      voteDeadline={voteDeadline}
     />
   )
 }

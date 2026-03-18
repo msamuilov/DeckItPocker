@@ -1,9 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import CardGrid from '../components/CardGrid'
 import StoryTabs from '../components/StoryTabs'
 import './Room.css'
+
+const DEADLINE_OPTIONS = [
+  { label: '2h', ms: 2 * 60 * 60 * 1000 },
+  { label: '8h', ms: 8 * 60 * 60 * 1000 },
+  { label: '24h', ms: 24 * 60 * 60 * 1000 },
+]
+
+function formatCountdown(deadlineMs) {
+  const left = Math.max(0, deadlineMs - Date.now())
+  const totalSeconds = Math.floor(left / 1000)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':')
+}
 
 export default function Room({
   roomId,
@@ -24,14 +39,24 @@ export default function Room({
   onNameClick,
   isAdmin,
   onKick,
+  setVoteDeadline,
+  voteDeadline,
 }) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
+  const [countdown, setCountdown] = useState('')
   const currentStoryId = session?.currentStoryId ?? null
   const revealVotes = session?.revealVotes ?? false
   const stories = session?.stories ?? []
   const waitingCount = players.filter((p) => !p.voted).length
   const sessionStartedAt = session?.createdAt ? new Date(session.createdAt).getTime() : null
+
+  useEffect(() => {
+    if (!voteDeadline || revealVotes) return
+    setCountdown(formatCountdown(voteDeadline))
+    const t = setInterval(() => setCountdown(formatCountdown(voteDeadline)), 1000)
+    return () => clearInterval(t)
+  }, [voteDeadline, revealVotes])
 
   const sessionTitle = session?.title || 'Planning session'
 
@@ -86,24 +111,48 @@ export default function Room({
               ) : null
             })()}
           </div>
-          <CardGrid
-            selectedValue={votes?.[currentStoryId]?.[myPlayerId]}
-            reveal={revealVotes}
-            votes={revealVotes ? votes?.[currentStoryId] : null}
-            onSelect={onVote}
-            currentStoryId={currentStoryId}
-          />
+          <div className="room-cards-wrap">
+            <CardGrid
+              selectedValue={votes?.[currentStoryId]?.[myPlayerId]}
+              reveal={revealVotes}
+              votes={revealVotes ? votes?.[currentStoryId] : null}
+              onSelect={onVote}
+              currentStoryId={currentStoryId}
+            />
+          </div>
           {currentStoryId && (
             <div className="room-actions">
               {!revealVotes ? (
-                <button type="button" className="room-reveal-btn" onClick={onReveal}>
-                  Reveal votes
-                </button>
+                <>
+                  {voteDeadline ? (
+                    <div className="room-deadline">
+                      <span className="room-deadline-label">Voting closes in</span>
+                      <span className="room-deadline-countdown">{countdown}</span>
+                    </div>
+                  ) : (
+                    <div className="room-deadline-options">
+                      <span className="room-deadline-label">Close voting in:</span>
+                      {DEADLINE_OPTIONS.map(({ label, ms }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          className="room-deadline-btn"
+                          onClick={() => setVoteDeadline?.(ms)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button type="button" className="room-reveal-btn" onClick={onReveal}>
+                    Reveal now
+                  </button>
+                </>
               ) : (
                 <button
                   type="button"
                   className="room-new-round-btn"
-                  onClick={() => onSessionUpdate?.({ revealVotes: false })}
+                  onClick={() => onSessionUpdate?.({ revealVotes: false, voteDeadline: null })}
                 >
                   New round
                 </button>
@@ -128,6 +177,9 @@ export default function Room({
             isAdmin={isAdmin}
             myPlayerId={myPlayerId}
             onKick={onKick}
+            currentStoryId={currentStoryId}
+            revealVotes={revealVotes}
+            votes={votes}
           />
         </div>
       </div>

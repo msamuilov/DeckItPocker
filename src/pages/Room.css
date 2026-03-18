@@ -1,5 +1,6 @@
 .room-header {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .room-title {
@@ -37,8 +38,58 @@
   word-break: break-all;
 }
 
+.room-cards-wrap {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .room-actions {
   margin-top: 16px;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-deadline,
+.room-deadline-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+}
+
+.room-deadline-label {
+  color: var(--text);
+}
+
+.room-deadline-countdown {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--text-h);
+  font-size: 1.125rem;
+}
+
+.room-deadline-options {
+  gap: 6px;
+}
+
+.room-deadline-btn {
+  padding: 6px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text-h);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.room-deadline-btn:hover {
+  background: var(--border);
+  border-color: var(--accent);
 }
 
 .room-reveal-btn,

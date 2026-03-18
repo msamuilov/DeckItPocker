@@ -10,6 +10,9 @@ export default function Sidebar({
   isAdmin = false,
   myPlayerId,
   onKick,
+  currentStoryId,
+  revealVotes = false,
+  votes = {},
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -18,17 +21,22 @@ export default function Sidebar({
     return () => clearInterval(id)
   }, [sessionStartedAt])
 
-  const allVoted = waitingCount === 0 && players.length > 0
+  const hasActiveStory = !!currentStoryId
+  const allVoted = hasActiveStory && waitingCount === 0 && players.length > 0
   const timer = sessionStartedAt
     ? formatElapsed(now - sessionStartedAt)
     : '00:00:00'
 
+  const statusMessage = !hasActiveStory
+    ? 'Select a story to vote'
+    : allVoted
+      ? 'All voted'
+      : `Waiting on ${waitingCount} player${waitingCount !== 1 ? 's' : ''} to vote`
+
   return (
     <aside className="sidebar">
-      <div className={`sidebar-status ${allVoted ? 'sidebar-status-done' : ''}`}>
-        {allVoted
-          ? 'All voted'
-          : `Waiting on ${waitingCount} player${waitingCount !== 1 ? 's' : ''} to vote`}
+      <div className={`sidebar-status ${allVoted ? 'sidebar-status-done' : ''} ${!hasActiveStory ? 'sidebar-status-idle' : ''}`}>
+        {statusMessage}
       </div>
       <div className="sidebar-meta">
         <span>Players:</span>
@@ -48,11 +56,11 @@ export default function Sidebar({
             <span className="sidebar-player-time">
               {p.lastVoteAt ? formatElapsed(Date.now() - p.lastVoteAt) : '00:00:00'}
             </span>
-            {isAdmin && p.id !== myPlayerId && onKick && (
+            {isAdmin && (p.persistentId || p.id) !== myPlayerId && onKick && (
               <button
                 type="button"
                 className="sidebar-player-kick"
-                onClick={() => onKick(p.id)}
+                onClick={() => onKick(p.persistentId || p.id)}
                 title={`Remove ${p.name}`}
                 aria-label={`Remove ${p.name}`}
               >
@@ -62,6 +70,21 @@ export default function Sidebar({
           </li>
         ))}
       </ul>
+      {currentStoryId && revealVotes && votes?.[currentStoryId] && (
+        <div className="sidebar-revealed-votes" aria-label="Who voted what">
+          <h3 className="sidebar-revealed-votes-title">Votes</h3>
+          <ul className="sidebar-revealed-votes-list">
+            {players
+              .filter((p) => (p.persistentId || p.id) in (votes[currentStoryId] || {}))
+              .map((p) => (
+                <li key={p.persistentId || p.id} className="sidebar-revealed-votes-item">
+                  <span className="sidebar-revealed-votes-name">{p.name}</span>
+                  <span className="sidebar-revealed-votes-value">{votes[currentStoryId][p.persistentId || p.id]}</span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
       <div className="sidebar-invite">
         <button type="button" className="sidebar-invite-btn" onClick={onInviteClick}>
           Invite a teammate
