@@ -19,10 +19,11 @@ Open [http://localhost:5173](http://localhost:5173). Create a session to get a r
 ## Deploy to GitHub Pages
 
 1. Push this repo to GitHub.
-2. In the repo: **Settings → Pages → Source**: choose **GitHub Actions**.
+2. In the repo go to **Settings → Pages**. Under **Build and deployment**, set **Source** to **GitHub Actions** (not "Deploy from a branch"). If you leave it on "Deploy from a branch", the site will serve the raw source and you will get **404 for main.jsx**.
 3. On each push to `main`, the workflow builds the app and publishes to Pages.
+4. Open the app at the **full URL** (include the repo name): **`https://YOUR_USERNAME.github.io/DeckItPocker/`** (e.g. `https://msamuilov.github.io/DeckItPocker/`). The trailing slash is optional.
 
-Live app: `https://YOUR_USERNAME.github.io/DeckItPocker/`
+**If you see "Failed to load resource: 404" for main.jsx:** Your site is serving the repo source instead of the built app. Fix: **Settings → Pages → Source** must be **GitHub Actions**. Then trigger a new deploy (push a commit or re-run the "Deploy to GitHub Pages" workflow in the Actions tab) and wait for it to finish. Use the URL above, not the root `https://YOUR_USERNAME.github.io/`.
 
 ## How it works
 
