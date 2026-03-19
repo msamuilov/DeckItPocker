@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { joinRoom, selfId } from 'trystero'
 import {
-  mergeState,
   createInitialSession,
   createPlayer,
   createStory,
@@ -11,6 +10,9 @@ import { getOrCreatePersistentPlayerId } from '../utils/persistentPlayerId'
 
 const APP_ID = 'deckitpocker'
 const STATE_ACTION = 'state'
+const ACTION_ACTION = 'action'
+
+/** Only the organizer (room creator) broadcasts state. Participants send actions; organizer applies and broadcasts. */
 
 export function useTrysteroRoom(roomId) {
   const [state, setState] = useState({
@@ -26,7 +28,13 @@ export function useTrysteroRoom(roomId) {
   const myPersistentId = getOrCreatePersistentPlayerId()
 
   const sendStateRef = useRef(null)
+  const sendActionRef = useRef(null)
+
+  const isOrganizer = () => stateRef.current.session?.adminId === myPersistentId
+
+  /** Only organizer sends state. Participants never call this to broadcast. */
   const broadcastState = useCallback((next) => {
+    if (!isOrganizer()) return
     const sendState = sendStateRef.current
     if (!sendState) return
     const payload = typeof next === 'function' ? next(stateRef.current) : next
@@ -41,63 +49,108 @@ export function useTrysteroRoom(roomId) {
     roomRef.current = room
 
     const [sendState, getState] = room.makeAction(STATE_ACTION)
+    const [sendAction, getAction] = room.makeAction(ACTION_ACTION)
     sendStateRef.current = sendState
+    sendActionRef.current = sendAction
 
-    getState((incoming, peerId) => {
-      setState((prev) => {
-        const merged = mergeState(prev, incoming, myId)
-        return merged
-      })
+    getState((incoming) => {
+      if (!incoming || !incoming.session) return
+      setState(incoming)
+    })
+
+    getAction((data, peerId) => {
+      const prev = stateRef.current
+      if (!prev.session || prev.session.adminId !== myPersistentId) return
+      if (data?.type === 'requestState') {
+        sendState(prev)
+        return
+      }
+      const next = applyAction(prev, data, peerId)
+      if (next) {
+        sendState(next)
+        setState(next)
+      }
     })
 
     room.onPeerJoin((peerId) => {
-      setState((prev) => {
-        const session = prev.session ?? createInitialSession(roomId)
-        const players = [...(prev.players ?? [])]
-        const alreadyHaveUs = players.some((p) => (p.persistentId || p.id) === myPersistentId)
-        if (!alreadyHaveUs) {
-          players.push(createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, 'other'))
-        }
-        const next = { session, players: [...players], votes: prev.votes ?? {} }
-        sendState(next)
-        return mergeState(prev, next, myId)
-      })
+      const prev = stateRef.current
+      if (!prev.session || prev.session.adminId !== myPersistentId) return
+      const players = [...(prev.players ?? [])]
+      const exists = players.some((p) => p.id === peerId)
+      if (!exists) {
+        players.push(
+          createPlayer(peerId, `Guest-${String(peerId).slice(0, 8)}`, peerId, 'other')
+        )
+      }
+      const next = { ...prev, players, votes: prev.votes ?? {} }
+      sendState(next)
+      setState(next)
     })
 
     return () => {
       room.leave()
       roomRef.current = null
+      sendStateRef.current = null
+      sendActionRef.current = null
     }
-  }, [roomId, myId])
+  }, [roomId, myPersistentId])
+
+  useEffect(() => {
+    if (!roomId || !roomRef.current) return
+    const hasSession = stateRef.current.session != null
+    const peerCount = Object.keys(roomRef.current.getPeers?.() ?? {}).length
+    if (hasSession || peerCount === 0) return
+    const t = setTimeout(() => {
+      if (!stateRef.current.session) {
+        sendActionRef.current?.({ type: 'requestState' })
+      }
+    }, 500)
+    return () => clearTimeout(t)
+  }, [roomId])
 
   const updateSession = useCallback(
     (patch) => {
+      if (!isOrganizer()) return
       setState((prev) => {
         const session = { ...(prev.session ?? createInitialSession(roomId)), ...patch }
         const next = { ...prev, session }
-        broadcastState(next)
+        sendStateRef.current?.(next)
         return next
       })
     },
-    [roomId, broadcastState]
+    [roomId]
   )
 
   const setVote = useCallback(
     (storyId, value) => {
-      setState((prev) => {
-        const votes = { ...(prev.votes ?? {}) }
-        votes[storyId] = { ...(votes[storyId] ?? {}), [myPersistentId]: value }
-        const players = (prev.players ?? []).map((p) =>
-          (p.persistentId || p.id) === myPersistentId
-            ? { ...p, voted: true, lastVoteAt: Date.now(), currentVote: value }
-            : p
-        )
-        const next = { ...prev, votes, players }
-        broadcastState(next)
-        return next
-      })
+      if (isOrganizer()) {
+        setState((prev) => {
+          const votes = { ...(prev.votes ?? {}) }
+          votes[storyId] = { ...(votes[storyId] ?? {}), [myPersistentId]: value }
+          const players = (prev.players ?? []).map((p) =>
+            (p.persistentId || p.id) === myPersistentId
+              ? { ...p, voted: true, lastVoteAt: Date.now(), currentVote: value }
+              : p
+          )
+          const next = { ...prev, votes, players }
+          sendStateRef.current?.(next)
+          return next
+        })
+      } else {
+        sendActionRef.current?.({ type: 'vote', persistentId: myPersistentId, storyId, value })
+        setState((prev) => {
+          const votes = { ...(prev.votes ?? {}) }
+          votes[storyId] = { ...(votes[storyId] ?? {}), [myPersistentId]: value }
+          const players = (prev.players ?? []).map((p) =>
+            (p.persistentId || p.id) === myPersistentId
+              ? { ...p, voted: true, lastVoteAt: Date.now(), currentVote: value }
+              : p
+          )
+          return { ...prev, votes, players }
+        })
+      }
     },
-    [myPersistentId, broadcastState]
+    [myPersistentId]
   )
 
   const revealVotes = useCallback(() => {
@@ -114,29 +167,59 @@ export function useTrysteroRoom(roomId) {
 
   const addPlayer = useCallback(
     (name, role = 'other') => {
-      setState((prev) => {
-        const players = [...(prev.players ?? [])]
-        const me = players.find((p) => (p.persistentId || p.id) === myPersistentId)
-        if (me) {
-          const idx = players.indexOf(me)
-          players[idx] = { ...me, id: myId, name, role: role || 'other' }
-        } else {
-          players.push(createPlayer(myId, name || `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, role || 'other'))
-        }
-        const next = { ...prev, players }
-        broadcastState(next)
-        return next
-      })
+      if (isOrganizer()) {
+        setState((prev) => {
+          const players = [...(prev.players ?? [])]
+          const me = players.find((p) => (p.persistentId || p.id) === myPersistentId)
+          if (me) {
+            const idx = players.indexOf(me)
+            players[idx] = { ...me, id: myId, name, role: role || 'other' }
+          } else {
+            players.push(
+              createPlayer(myId, name || `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, role || 'other')
+            )
+          }
+          const next = { ...prev, players }
+          sendStateRef.current?.(next)
+          return next
+        })
+      } else {
+        sendActionRef.current?.({
+          type: 'join',
+          fromPeerId: myId,
+          persistentId: myPersistentId,
+          name: name || `Guest-${myPersistentId.slice(0, 8)}`,
+          role: role || 'other',
+        })
+        setState((prev) => {
+          const players = [...(prev.players ?? [])]
+          const me = players.find((p) => (p.persistentId || p.id) === myPersistentId)
+          if (me) {
+            const idx = players.indexOf(me)
+            players[idx] = { ...me, id: myId, name, role: role || 'other' }
+          } else {
+            players.push(
+              createPlayer(myId, name || `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, role || 'other')
+            )
+          }
+          return { ...prev, players }
+        })
+      }
     },
-    [myId, myPersistentId, broadcastState]
+    [myId, myPersistentId]
   )
 
   const initSession = useCallback(() => {
     setState((prev) => {
       if (prev.session) return prev
+      const peers = roomRef.current?.getPeers?.() ?? {}
+      const peerCount = Object.keys(peers).length
+      if (peerCount > 0) return prev
       const session = createInitialSession(roomId, 'Planning session', myPersistentId)
-      const players = [createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, 'other')]
-      const next = { session, players: [...players], votes: prev.votes ?? {} }
+      const players = [
+        createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, 'other'),
+      ]
+      const next = { session, players, votes: {} }
       sendStateRef.current?.(next)
       return next
     })
@@ -144,26 +227,29 @@ export function useTrysteroRoom(roomId) {
 
   const kickPlayer = useCallback(
     (playerPersistentId) => {
+      if (!isOrganizer()) return
       setState((prev) => {
         const session = prev.session
         if (!session || session.adminId !== myPersistentId) return prev
         const kicked = [...(session.kickedPlayerIds ?? []), playerPersistentId]
         const next = { ...prev, session: { ...session, kickedPlayerIds: kicked } }
-        broadcastState(next)
+        sendStateRef.current?.(next)
         return next
       })
     },
-    [myPersistentId, broadcastState]
+    [myPersistentId]
   )
 
   const leaveRoom = useCallback(() => {
     roomRef.current?.leave()
     roomRef.current = null
     sendStateRef.current = null
+    sendActionRef.current = null
   }, [])
 
   const addStory = useCallback(
     (title = '', link = '') => {
+      if (!isOrganizer()) return
       const id = `story-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       setState((prev) => {
         const session = prev.session ?? createInitialSession(roomId)
@@ -171,15 +257,16 @@ export function useTrysteroRoom(roomId) {
         const newSession = { ...session, stories }
         if (!session.currentStoryId) newSession.currentStoryId = id
         const next = { ...prev, session: newSession }
-        broadcastState(next)
+        sendStateRef.current?.(next)
         return next
       })
     },
-    [roomId, broadcastState]
+    [roomId]
   )
 
   const setStoryStatus = useCallback(
     (storyId, status) => {
+      if (!isOrganizer()) return
       setState((prev) => {
         const session = prev.session
         if (!session?.stories) return prev
@@ -187,11 +274,11 @@ export function useTrysteroRoom(roomId) {
           s.id === storyId ? { ...s, status } : s
         )
         const next = { ...prev, session: { ...session, stories } }
-        broadcastState(next)
+        sendStateRef.current?.(next)
         return next
       })
     },
-    [broadcastState]
+    []
   )
 
   const currentStoryId = state.session?.currentStoryId
@@ -199,7 +286,7 @@ export function useTrysteroRoom(roomId) {
   const kickedIds = state.session?.kickedPlayerIds ?? []
 
   useEffect(() => {
-    if (!voteDeadline || state.session?.revealVotes) return
+    if (!isOrganizer() || !voteDeadline || state.session?.revealVotes) return
     if (Date.now() >= voteDeadline) {
       updateSession({ revealVotes: true, voteDeadline: null })
       return
@@ -220,8 +307,12 @@ export function useTrysteroRoom(roomId) {
     const pConnected = connectedPeerIds.has(p.id)
     const existingConnected = existing && connectedPeerIds.has(existing.id)
     const pIsUs = key === myPersistentId && p.id === myId
-    const existingIsUs = existing && (existing.persistentId || existing.id) === myPersistentId && existing.id === myId
-    const preferThis = !existing || (pConnected && !existingConnected) || (pIsUs && !existingIsUs)
+    const existingIsUs =
+      existing &&
+      (existing.persistentId || existing.id) === myPersistentId &&
+      existing.id === myId
+    const preferThis =
+      !existing || (pConnected && !existingConnected) || (pIsUs && !existingIsUs)
     if (preferThis) acc.set(key, p)
     return acc
   }, new Map())
@@ -233,7 +324,9 @@ export function useTrysteroRoom(roomId) {
     state.votes ?? {},
     currentStoryId
   )
-  const waitingCount = playersForSidebar.filter((p) => !p.voted).length
+  const waitingCount = playersForSidebar.filter(
+    (p) => p.role !== 'po' && !p.voted
+  ).length
   const isAdmin = state.session?.adminId === myPersistentId
   const kickedOut = kickedIds.includes(myPersistentId)
 
@@ -258,5 +351,50 @@ export function useTrysteroRoom(roomId) {
     setVoteDeadline,
     voteDeadline,
     broadcastState,
+  }
+}
+
+function applyAction(prev, data, peerId) {
+  if (!data || !data.type) return null
+  if (!prev.session) return null
+
+  switch (data.type) {
+    case 'vote': {
+      const { persistentId, storyId, value } = data
+      if (!storyId || value == null) return null
+      const votes = { ...(prev.votes ?? {}) }
+      votes[storyId] = { ...(votes[storyId] ?? {}), [persistentId]: value }
+      const players = (prev.players ?? []).map((p) =>
+        (p.persistentId || p.id) === persistentId
+          ? { ...p, voted: true, lastVoteAt: Date.now(), currentVote: value }
+          : p
+      )
+      return { ...prev, votes, players }
+    }
+    case 'join': {
+      const { fromPeerId, persistentId, name, role } = data
+      const players = [...(prev.players ?? [])]
+      const idx = players.findIndex((p) => p.id === (fromPeerId ?? peerId))
+      if (idx >= 0) {
+        players[idx] = {
+          ...players[idx],
+          persistentId: persistentId ?? players[idx].persistentId,
+          name: name ?? players[idx].name,
+          role: role || 'other',
+        }
+      } else {
+        players.push(
+          createPlayer(
+            fromPeerId ?? peerId,
+            name || `Guest-${(persistentId || peerId).toString().slice(0, 8)}`,
+            persistentId ?? fromPeerId ?? peerId,
+            role || 'other'
+          )
+        )
+      }
+      return { ...prev, players }
+    }
+    default:
+      return null
   }
 }

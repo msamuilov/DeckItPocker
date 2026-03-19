@@ -36,7 +36,10 @@ export default function Room({
   onStoryStatusChange,
   onSessionUpdate,
   onCopyInvite,
+  onShareRoom,
+  onCopyRoomId,
   inviteUrl,
+  roomIdCopied,
   onNameClick,
   isAdmin,
   onKick,
@@ -60,6 +63,8 @@ export default function Room({
   }, [voteDeadline, revealVotes])
 
   const sessionTitle = session?.title || 'Planning session'
+  const myPlayer = players.find((p) => (p.persistentId || p.id) === myPlayerId)
+  const canVote = myPlayer?.role !== 'po'
   const storyVotes = currentStoryId ? votes?.[currentStoryId] : null
   const averageVote =
     revealVotes && storyVotes && Object.keys(storyVotes).length > 0
@@ -124,12 +129,18 @@ export default function Room({
                 Average: <strong>{averageLabel}</strong>
               </div>
             )}
+            {!canVote && currentStoryId && (
+              <p className="room-observer-hint" role="status">
+                As PO you observe; you don&apos;t vote.
+              </p>
+            )}
             <CardGrid
               selectedValue={votes?.[currentStoryId]?.[myPlayerId]}
               reveal={revealVotes}
               votes={revealVotes ? votes?.[currentStoryId] : null}
               onSelect={onVote}
               currentStoryId={currentStoryId}
+              canVote={canVote}
             />
           </div>
           {currentStoryId && (
@@ -185,7 +196,11 @@ export default function Room({
             players={players}
             sessionStartedAt={sessionStartedAt}
             onInviteClick={onCopyInvite}
+            onShareRoom={onShareRoom}
+            onCopyRoomId={onCopyRoomId}
             inviteUrl={inviteUrl}
+            roomIdCopied={roomIdCopied}
+            roomId={roomId}
             isAdmin={isAdmin}
             myPlayerId={myPlayerId}
             onKick={onKick}

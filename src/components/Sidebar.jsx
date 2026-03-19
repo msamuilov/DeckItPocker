@@ -7,7 +7,11 @@ export default function Sidebar({
   players = [],
   sessionStartedAt,
   onInviteClick,
+  onShareRoom,
+  onCopyRoomId,
   inviteUrl,
+  roomIdCopied,
+  roomId,
   isAdmin = false,
   myPlayerId,
   onKick,
@@ -64,7 +68,7 @@ export default function Sidebar({
                 type="button"
                 className="sidebar-player-kick"
                 onClick={() => onKick(p.persistentId || p.id)}
-                title={`Remove ${p.name}`}
+                title={`Remove ${p.name} (only room creator can kick)`}
                 aria-label={`Remove ${p.name}`}
               >
                 Kick
@@ -92,12 +96,18 @@ export default function Sidebar({
         </div>
       )}
       <div className="sidebar-invite">
-        <button type="button" className="sidebar-invite-btn" onClick={onInviteClick}>
+        <button type="button" className="sidebar-invite-btn" onClick={onShareRoom}>
+          Share room
+        </button>
+        <button type="button" className="sidebar-invite-btn" onClick={onCopyRoomId} title="Copy room ID">
+          {roomIdCopied ? 'Copied!' : 'Copy room ID'}
+        </button>
+        <button type="button" className="sidebar-invite-btn sidebar-invite-btn-secondary" onClick={onInviteClick}>
           Invite a teammate
         </button>
         {inviteUrl && (
           <p className="sidebar-invite-url">
-            <small>Share: {inviteUrl}</small>
+            <small>{inviteUrl.length > 40 ? inviteUrl.slice(0, 40) + '…' : inviteUrl}</small>
           </p>
         )}
       </div>

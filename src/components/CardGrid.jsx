@@ -2,8 +2,8 @@ import './CardGrid.css'
 
 const CARD_VALUES = ['0', '½', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '☕']
 
-export default function CardGrid({ selectedValue, reveal, votes, onSelect, currentStoryId }) {
-  const canSelect = !!currentStoryId && !reveal
+export default function CardGrid({ selectedValue, reveal, votes, onSelect, currentStoryId, canVote = true }) {
+  const canSelect = !!currentStoryId && !reveal && canVote
 
   return (
     <div className="card-grid" role="group" aria-label="Planning poker cards">

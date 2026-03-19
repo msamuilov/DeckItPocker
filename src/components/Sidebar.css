@@ -170,6 +170,15 @@
   background: var(--card-bg);
 }
 
+.sidebar-invite-btn + .sidebar-invite-btn {
+  margin-top: 8px;
+}
+
+.sidebar-invite-btn-secondary {
+  border-style: solid;
+  opacity: 0.9;
+}
+
 .sidebar-invite-url {
   margin: 8px 0 0;
   font-size: 0.75rem;

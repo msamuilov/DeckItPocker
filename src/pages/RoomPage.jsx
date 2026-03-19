@@ -43,6 +43,7 @@ export default function RoomPage({ theme, onThemeToggle }) {
   const [userName, setUserName] = useState(getStoredUserName)
   const [userRole, setUserRole] = useState(getStoredUserRole)
   const [inviteCopied, setInviteCopied] = useState(false)
+  const [roomIdCopied, setRoomIdCopied] = useState(false)
   const [showNameDialog, setShowNameDialog] = useState(() => !getStoredUserName() || !getStoredUserRole())
   const [nameDraft, setNameDraft] = useState('')
   const [roleDraft, setRoleDraft] = useState(() => getStoredUserRole() || 'developer')
@@ -91,13 +92,40 @@ export default function RoomPage({ theme, onThemeToggle }) {
     }
   }, [userName, userRole, addPlayer])
 
+  const inviteUrl = roomId ? window.location.origin + window.location.pathname + '#/room/' + roomId : ''
+
   const handleCopyInvite = useCallback(() => {
-    const base = window.location.origin + window.location.pathname
-    const hash = '#/room/' + roomId
-    const url = base + hash
-    navigator.clipboard?.writeText(url).then(() => {
+    if (!inviteUrl) return
+    navigator.clipboard?.writeText(inviteUrl).then(() => {
       setInviteCopied(true)
       setTimeout(() => setInviteCopied(false), 2000)
+    })
+  }, [inviteUrl])
+
+  const handleShareRoom = useCallback(() => {
+    if (!inviteUrl) return
+    const title = 'Planning poker session'
+    const text = 'Join the planning poker session'
+    if (navigator.share) {
+      navigator.share({ title, text, url: inviteUrl }).catch(() => {
+        navigator.clipboard?.writeText(inviteUrl).then(() => {
+          setInviteCopied(true)
+          setTimeout(() => setInviteCopied(false), 2000)
+        })
+      })
+    } else {
+      navigator.clipboard?.writeText(inviteUrl).then(() => {
+        setInviteCopied(true)
+        setTimeout(() => setInviteCopied(false), 2000)
+      })
+    }
+  }, [inviteUrl])
+
+  const handleCopyRoomId = useCallback(() => {
+    if (!roomId) return
+    navigator.clipboard?.writeText(roomId).then(() => {
+      setRoomIdCopied(true)
+      setTimeout(() => setRoomIdCopied(false), 2000)
     })
   }, [roomId])
 
@@ -125,7 +153,6 @@ export default function RoomPage({ theme, onThemeToggle }) {
   )
 
   const displayName = userName || players.find((p) => (p.persistentId || p.id) === myPlayerId)?.name || `Guest-${myPlayerId?.slice(0, 8) || ''}`
-  const inviteUrl = roomId ? window.location.origin + window.location.pathname + '#/room/' + roomId : ''
 
   if (showNameDialog) {
     return (
@@ -185,7 +212,10 @@ export default function RoomPage({ theme, onThemeToggle }) {
       onStoryStatusChange={setStoryStatus}
       onSessionUpdate={updateSession}
       onCopyInvite={handleCopyInvite}
+      onShareRoom={handleShareRoom}
+      onCopyRoomId={handleCopyRoomId}
       inviteUrl={inviteCopied ? 'Copied!' : inviteUrl}
+      roomIdCopied={roomIdCopied}
       onNameClick={handleNameClick}
       isAdmin={isAdmin}
       onKick={kickPlayer}
