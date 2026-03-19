@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Room from './Room'
 import { useTrysteroRoom } from '../hooks/useTrysteroRoom'
+import { ROLES } from '../constants/roles'
 import './RoomPage.css'
 
 const USER_NAME_KEY = 'deckitpocker-username'
+const USER_ROLE_KEY = 'deckitpocker-userrole'
 
 function getStoredUserName() {
   try {
@@ -20,13 +22,30 @@ function setStoredUserName(name) {
   } catch {}
 }
 
+function getStoredUserRole() {
+  try {
+    const r = localStorage.getItem(USER_ROLE_KEY) || ''
+    return ROLES.some((x) => x.value === r) ? r : ''
+  } catch {
+    return ''
+  }
+}
+
+function setStoredUserRole(role) {
+  try {
+    localStorage.setItem(USER_ROLE_KEY, role)
+  } catch {}
+}
+
 export default function RoomPage({ theme, onThemeToggle }) {
   const { roomId } = useParams()
   const navigate = useNavigate()
   const [userName, setUserName] = useState(getStoredUserName)
+  const [userRole, setUserRole] = useState(getStoredUserRole)
   const [inviteCopied, setInviteCopied] = useState(false)
-  const [showNameDialog, setShowNameDialog] = useState(() => !getStoredUserName())
+  const [showNameDialog, setShowNameDialog] = useState(() => !getStoredUserName() || !getStoredUserRole())
   const [nameDraft, setNameDraft] = useState('')
+  const [roleDraft, setRoleDraft] = useState(() => getStoredUserRole() || 'developer')
 
   const {
     session,
@@ -66,10 +85,11 @@ export default function RoomPage({ theme, onThemeToggle }) {
 
   useEffect(() => {
     if (userName) {
-      addPlayer(userName)
+      addPlayer(userName, userRole || 'other')
       setStoredUserName(userName)
+      if (userRole) setStoredUserRole(userRole)
     }
-  }, [userName, addPlayer])
+  }, [userName, userRole, addPlayer])
 
   const handleCopyInvite = useCallback(() => {
     const base = window.location.origin + window.location.pathname
@@ -92,13 +112,16 @@ export default function RoomPage({ theme, onThemeToggle }) {
     (e) => {
       e.preventDefault()
       const name = nameDraft.trim()
+      const role = roleDraft || 'other'
       if (name) {
         setUserName(name)
+        setUserRole(role)
         setStoredUserName(name)
+        setStoredUserRole(role)
         setShowNameDialog(false)
       }
     },
-    [nameDraft]
+    [nameDraft, roleDraft]
   )
 
   const displayName = userName || players.find((p) => (p.persistentId || p.id) === myPlayerId)?.name || `Guest-${myPlayerId?.slice(0, 8) || ''}`
@@ -108,8 +131,8 @@ export default function RoomPage({ theme, onThemeToggle }) {
     return (
       <div className="name-dialog-overlay">
         <div className="name-dialog" role="dialog" aria-labelledby="name-dialog-title">
-          <h2 id="name-dialog-title">Choose your name</h2>
-          <p className="name-dialog-hint">Enter your display name to join the session.</p>
+          <h2 id="name-dialog-title">Join the session</h2>
+          <p className="name-dialog-hint">Enter your name and role to join.</p>
           <form onSubmit={handleNameSubmit}>
             <input
               type="text"
@@ -121,6 +144,22 @@ export default function RoomPage({ theme, onThemeToggle }) {
               autoComplete="name"
               aria-label="Your name"
             />
+            <label className="name-dialog-label" htmlFor="name-dialog-role">
+              Role
+            </label>
+            <select
+              id="name-dialog-role"
+              value={roleDraft}
+              onChange={(e) => setRoleDraft(e.target.value)}
+              className="name-dialog-select"
+              aria-label="Your role"
+            >
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.icon} {r.label}
+                </option>
+              ))}
+            </select>
             <button type="submit" className="name-dialog-submit" disabled={!nameDraft.trim()}>
               Join
             </button>

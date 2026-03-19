@@ -46,6 +46,18 @@
   overflow: hidden;
 }
 
+.room-average {
+  font-size: 1.125rem;
+  color: var(--text);
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.room-average strong {
+  color: var(--text-h);
+  font-size: 1.25rem;
+}
+
 .room-actions {
   margin-top: 16px;
   flex-shrink: 0;

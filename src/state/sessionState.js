@@ -17,12 +17,13 @@ export function createInitialSession(roomId, title = 'Planning session', adminId
   }
 }
 
-export function createPlayer(id, name = `Guest-${id.slice(0, 6)}`, persistentId = null) {
+export function createPlayer(id, name = `Guest-${id.slice(0, 6)}`, persistentId = null, role = 'other') {
   const pid = persistentId || id
   return {
     id,
     persistentId: pid,
     name,
+    role: role || 'other',
     voted: false,
     lastVoteAt: null,
     currentVote: null,

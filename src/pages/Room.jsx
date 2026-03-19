@@ -3,6 +3,7 @@ import TopBar from '../components/TopBar'
 import Sidebar from '../components/Sidebar'
 import CardGrid from '../components/CardGrid'
 import StoryTabs from '../components/StoryTabs'
+import { getAverageVote, formatAverage } from '../utils/averageVote'
 import './Room.css'
 
 const DEADLINE_OPTIONS = [
@@ -59,6 +60,12 @@ export default function Room({
   }, [voteDeadline, revealVotes])
 
   const sessionTitle = session?.title || 'Planning session'
+  const storyVotes = currentStoryId ? votes?.[currentStoryId] : null
+  const averageVote =
+    revealVotes && storyVotes && Object.keys(storyVotes).length > 0
+      ? getAverageVote(storyVotes)
+      : null
+  const averageLabel = averageVote != null ? formatAverage(averageVote) : null
 
   function startEditTitle() {
     setTitleDraft(sessionTitle)
@@ -112,6 +119,11 @@ export default function Room({
             })()}
           </div>
           <div className="room-cards-wrap">
+            {revealVotes && averageLabel && (
+              <div className="room-average" aria-live="polite">
+                Average: <strong>{averageLabel}</strong>
+              </div>
+            )}
             <CardGrid
               selectedValue={votes?.[currentStoryId]?.[myPlayerId]}
               reveal={revealVotes}

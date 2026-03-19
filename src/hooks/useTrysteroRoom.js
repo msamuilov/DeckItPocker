@@ -56,7 +56,7 @@ export function useTrysteroRoom(roomId) {
         const players = [...(prev.players ?? [])]
         const alreadyHaveUs = players.some((p) => (p.persistentId || p.id) === myPersistentId)
         if (!alreadyHaveUs) {
-          players.push(createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId))
+          players.push(createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, 'other'))
         }
         const next = { session, players: [...players], votes: prev.votes ?? {} }
         sendState(next)
@@ -113,15 +113,15 @@ export function useTrysteroRoom(roomId) {
   )
 
   const addPlayer = useCallback(
-    (name) => {
+    (name, role = 'other') => {
       setState((prev) => {
         const players = [...(prev.players ?? [])]
         const me = players.find((p) => (p.persistentId || p.id) === myPersistentId)
         if (me) {
           const idx = players.indexOf(me)
-          players[idx] = { ...me, id: myId, name }
+          players[idx] = { ...me, id: myId, name, role: role || 'other' }
         } else {
-          players.push(createPlayer(myId, name || `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId))
+          players.push(createPlayer(myId, name || `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, role || 'other'))
         }
         const next = { ...prev, players }
         broadcastState(next)
@@ -135,7 +135,7 @@ export function useTrysteroRoom(roomId) {
     setState((prev) => {
       if (prev.session) return prev
       const session = createInitialSession(roomId, 'Planning session', myPersistentId)
-      const players = [createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId)]
+      const players = [createPlayer(myId, `Guest-${myPersistentId.slice(0, 8)}`, myPersistentId, 'other')]
       const next = { session, players: [...players], votes: prev.votes ?? {} }
       sendStateRef.current?.(next)
       return next

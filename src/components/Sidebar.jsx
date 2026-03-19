@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { getRoleIcon } from '../constants/roles'
 import './Sidebar.css'
 
 export default function Sidebar({
@@ -45,7 +46,9 @@ export default function Sidebar({
       <ul className="sidebar-players" aria-label="Players">
         {players.map((p) => (
           <li key={p.id} className="sidebar-player">
-            <span className="sidebar-player-avatar" aria-hidden>👤</span>
+            <span className="sidebar-player-avatar" title={p.role} aria-hidden>
+              {getRoleIcon(p.role)}
+            </span>
             <span className="sidebar-player-name">{p.name}</span>
             <span
               className={`sidebar-player-voted ${p.voted ? 'voted' : ''}`}
@@ -78,6 +81,9 @@ export default function Sidebar({
               .filter((p) => (p.persistentId || p.id) in (votes[currentStoryId] || {}))
               .map((p) => (
                 <li key={p.persistentId || p.id} className="sidebar-revealed-votes-item">
+                  <span className="sidebar-revealed-votes-icon" title={p.role} aria-hidden>
+                    {getRoleIcon(p.role)}
+                  </span>
                   <span className="sidebar-revealed-votes-name">{p.name}</span>
                   <span className="sidebar-revealed-votes-value">{votes[currentStoryId][p.persistentId || p.id]}</span>
                 </li>
